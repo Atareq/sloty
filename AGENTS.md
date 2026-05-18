@@ -29,7 +29,8 @@ Current repo reality:
 - Current root URL config: `config/urls.py`
 - Current local apps package: `apps/`
 - Current implemented app: `apps/accounts/`
-- Current implemented domain apps: `apps/clubs/` and `apps/courts/`
+- Current implemented domain apps: `apps/clubs/`, `apps/courts/`, and
+  `apps/bookings/`
 - Project docs live under `docs/`
 - Requirements are split into `requirements/base.txt` and `requirements/dev.txt`
 - Style tooling exists through `.pre-commit-config.yaml`, `pyproject.toml`, and
@@ -37,8 +38,11 @@ Current repo reality:
 - Sprint 1 implements backend foundation and the custom accounts user model
 - Sprint 2 implements club/court setup, assignment models, and setup API
   scoping
+- Sprint 3 implements booking creation, booking list/detail and schedule
+  filters, and application-level overlap protection
 - Planned shared app name is `apps/common/`
-- Domain apps beyond `accounts`, `clubs`, and `courts` are not implemented yet
+- Domain apps beyond `accounts`, `clubs`, `courts`, and `bookings` are not
+  implemented yet
 
 Planned project direction:
 
@@ -48,7 +52,8 @@ Planned project direction:
 - Add shared infrastructure only when repeated patterns justify it.
 - Planned app layout: `accounts`, `clubs`, `courts`, `bookings`,
   `transactions`, `settlements`, `pricing`, `audit`, and `common`.
-- Only `accounts`, `clubs`, and `courts` should exist through Sprint 2.
+- Only `accounts`, `clubs`, `courts`, and `bookings` should exist through
+  Sprint 3.
 
 ## 3. Architecture Overview
 
@@ -73,6 +78,13 @@ Current implemented app:
   assignment logic.
 - Club/court scope must come from `ClubMembership` and
   `CourtStaffAssignment`, not from direct club or court fields on `User`.
+- `apps/bookings/` contains booking creation, list/detail APIs, schedule-style
+  filters, price snapshot calculation, and active booking overlap protection.
+- Booking outside working hours is allowed in Sprint 3, and no
+  `outside_working_hours` flag is stored.
+- Transactions, booking lifecycle actions, settlements, dashboards, and audit
+  logs are future sprint work and must not be implemented in `bookings` during
+  Sprint 3.
 
 Planned app pattern:
 
@@ -164,6 +176,20 @@ Rules for the flow:
 - `CourtStaffAssignment` assigns `STAFF` users to one active court for MVP.
 - Do not place booking, transaction, settlement, pricing, or audit behavior
   here.
+
+`apps/bookings/`
+
+- Booking foundation app.
+- Contains `Booking`, booking serializers, scoped booking viewsets, and booking
+  creation services.
+- New bookings start as `HOLD` because transactions are not implemented until
+  Sprint 4.
+- `total_price` is calculated by the backend from the court default price and
+  slot duration; clients must not control booking price in Sprint 3.
+- Overlap protection is currently application-level: `HOLD` and `CONFIRMED`
+  bookings block overlapping bookings on the same court.
+- Do not place transaction, settlement, lifecycle action, dashboard, marketplace,
+  notification, or audit-log behavior here in Sprint 3.
 
 `apps/common/`
 
@@ -346,6 +372,12 @@ Run Sprint 2 setup tests:
 
 ```bash
 pytest tests/clubs tests/courts
+```
+
+Run Sprint 3 booking tests:
+
+```bash
+pytest tests/bookings
 ```
 
 Run all tests:

@@ -55,6 +55,20 @@ http://127.0.0.1:8000/api/docs/
 - `/api/court-working-hours/`
 - `/api/court-staff-assignments/`
 
+## Sprint 3 Booking Endpoints
+
+- `/api/bookings/`
+
+Useful booking list filters:
+
+- `court`
+- `club`
+- `status`
+- `source`
+- `date`
+- `date_from`
+- `date_to`
+
 Run tests:
 
 ```bash
