@@ -1,0 +1,707 @@
+Phase 3 Started — Senior Team Lead / Sprint Planning
+
+We are now in Phase 3 only.
+
+I will not move to backend implementation / Django design until you explicitly say:
+
+Move to Phase 4
+
+In this phase, the goal is to convert the agreed business + BA rules into development sprints for:
+
+Backend
+Frontend
+Integration
+QA
+Release planning
+MVP Release Strategy
+
+I recommend building the product in this order:
+
+Sprint 0 — Project foundation
+Sprint 1 — Auth, roles, permissions
+Sprint 2 — Clubs, courts, working hours, pricing
+Sprint 3 — Booking calendar and booking creation
+Sprint 4 — Transactions and payment recording
+Sprint 5 — Booking lifecycle: cancel, reschedule, complete, no-show, expire
+Sprint 6 — Staff settlement
+Sprint 7 — Dashboards, reports, audit logs
+Sprint 8 — QA hardening, pilot readiness, deployment
+
+This is the cleanest order because bookings depend on clubs/courts, transactions depend on bookings, and settlement depends on transactions.
+
+Sprint 0 — Project Foundation
+Goal
+
+Set up the technical base for backend, frontend, database, environments, and development workflow.
+
+Backend Tasks
+Create Django project structure.
+Create main apps:
+accounts
+clubs
+courts
+bookings
+payments or transactions
+settlements
+audit_logs
+Configure PostgreSQL.
+Configure environment variables.
+Configure DRF.
+Configure JWT authentication.
+Configure API documentation with Swagger/OpenAPI.
+Add base response/error format.
+Add base timestamp models.
+Add soft-deactivation pattern where needed.
+Add project settings for local/development/production.
+Frontend Tasks
+Create Angular project.
+Configure routing.
+Configure auth module structure.
+Configure API service layer.
+Configure layout shell.
+Add Arabic-first layout direction support.
+Add mobile-first base design.
+Add login page skeleton.
+QA Tasks
+Verify backend project runs.
+Verify frontend project runs.
+Verify API connection.
+Verify environment setup.
+Verify database migrations run cleanly.
+Deliverables
+Backend project initialized.
+Frontend project initialized.
+Local environment working.
+API docs available.
+Basic frontend-backend connection working.
+Risks
+Bad structure now will slow everything later.
+Do not over-engineer clean architecture too early.
+Keep apps clear but practical.
+Sprint 1 — Authentication, Roles, Permissions
+Goal
+
+Allow users to log in and enforce role-based access.
+
+Roles
+Platform Super Admin
+Club Owner
+Club Manager
+Court Staff
+Backend Tasks
+Create user model or extend Django user.
+Add phone-based login or username/phone login.
+Add JWT login/refresh/logout.
+Add role model or role field.
+Add user status:
+active
+inactive
+Add ownership/assignment structure:
+owner to clubs
+manager to club
+staff to court
+Add permission checks:
+Platform admin: global
+Owner: own clubs only
+Manager: assigned club only
+Staff: assigned court only
+Add API endpoints:
+login
+refresh token
+current user/profile
+list users by scope
+create manager
+create staff
+activate/deactivate user
+Frontend Tasks
+Login page.
+Store auth token.
+Add route guards.
+Add role-based navigation.
+Add basic user management screens:
+owner creates manager
+owner/manager creates staff
+Show different menu based on role.
+QA Tasks
+Platform admin can access all.
+Owner cannot access other clubs.
+Manager cannot access other clubs.
+Staff cannot access other courts.
+Inactive user cannot log in.
+Token expiry works correctly.
+Deliverables
+Authentication complete.
+Role-based access enforced.
+Basic user management working.
+Definition of Done
+No endpoint trusts frontend role only.
+Permissions are enforced in backend.
+Unauthorized access returns proper error.
+Tests cover permission boundaries.
+Sprint 2 — Clubs, Courts, Working Hours, Pricing
+Goal
+
+Allow platform/admin/owners to set up the operational structure before bookings.
+
+Backend Tasks
+Create Club model.
+Create Court model.
+Create club-owner relation.
+Add club status:
+active
+inactive
+Add court status:
+active
+inactive
+Add court default price.
+Add court sport type.
+Add court working hours.
+Add court slot duration.
+Add court-level flag:
+requires_digital_payment_reference
+internal_hold_expiry_hours default 12
+Add club-level flags:
+manager_can_settle_transactions
+manager_can_change_pricing
+Add APIs:
+create/list/update/deactivate clubs
+create/list/update/deactivate courts
+configure working hours
+configure court price
+configure permission flags
+Frontend Tasks
+Platform admin club list.
+Create/edit club form.
+Owner club view.
+Court list under club.
+Create/edit court form.
+Configure price.
+Configure working hours.
+Configure slot duration.
+Configure payment reference flag.
+QA Tasks
+Club cannot be created without required fields.
+Court cannot be created without club.
+Court cannot be created without price.
+Staff cannot create courts.
+Owner cannot edit other clubs.
+Inactive court cannot be used for new bookings later.
+Deliverables
+Club/court setup complete.
+Working hours and pricing configured.
+Role access works.
+Definition of Done
+A real club with one or more courts can be fully configured.
+Staff can later be assigned to court.
+Frontend screens usable on mobile.
+Sprint 3 — Booking Calendar and Booking Creation
+Goal
+
+Allow staff/manager/owner to create bookings and see court schedule.
+
+Backend Tasks
+Create Booking model.
+Add booking statuses:
+Hold
+Confirmed
+Completed
+Cancelled
+No-show
+Expired
+Add booking source:
+Manual
+Admin Correction
+later Platform CS
+later App Booking
+Add booking required fields:
+club
+court
+customer name
+customer phone
+start time
+end time
+total price
+status
+created by
+source
+Add booking creation API.
+Add schedule/list API by:
+court
+club
+date
+week
+status
+Add overlap validation:
+Hold blocks slot
+Confirmed blocks slot
+Allow staff to create booking outside working hours.
+No special outside-working-hours flag.
+Price calculated from court/slot price.
+Staff cannot change price.
+Booking without transaction starts as Hold.
+Add audit log for booking creation.
+Frontend Tasks
+Mobile-first schedule page.
+Daily court schedule view.
+Week booking view.
+Create booking form.
+Customer name/phone fields.
+Select time slot.
+Show calculated price.
+Show booking status.
+Booking detail screen.
+Role-based court visibility:
+staff sees assigned court only
+manager sees club courts
+owner sees owned clubs
+QA Tasks
+Staff can create booking only in assigned court.
+Booking without payment becomes Hold.
+Hold blocks slot.
+Overlapping booking is blocked.
+Staff can create outside working hours.
+Cancelled/expired bookings do not block slot.
+Booking cannot be hard deleted.
+Deliverables
+Booking calendar usable.
+Booking creation works.
+Double-booking prevention works.
+Definition of Done
+Two users cannot book the same slot.
+Backend rechecks availability on save.
+Frontend displays correct slot status.
+Audit log records booking creation.
+Sprint 4 — Transactions and Payment Recording
+Goal
+
+Record money against bookings using multiple transactions.
+
+Backend Tasks
+Create Transaction model.
+Payment methods:
+Cash
+Instapay
+E-wallet
+Add transaction fields:
+booking
+amount
+method
+reference
+collected_by
+is_voided
+is_settled
+created_at
+notes
+Add transaction creation API.
+Validate:
+amount > 0
+amount cannot exceed remaining amount
+reference required depending on court flag
+Calculate remaining dynamically:
+booking total price - sum(valid transactions)
+Add booking status transition:
+Hold → Confirmed after first valid transaction
+Add transaction list API.
+Add void transaction API.
+Void rules:
+user can void only own unsettled transaction
+booking must not be completed
+reason required
+If all valid transactions are voided:
+Confirmed → Hold
+Add audit logs.
+Frontend Tasks
+Add payment button on booking details.
+Transaction form:
+amount
+method
+reference
+notes
+Show transaction list.
+Show total paid.
+Show remaining amount.
+Show void button only when allowed.
+Show payment method labels.
+Show reference requirement based on court policy.
+QA Tasks
+Add cash transaction.
+Add Instapay transaction with/without reference depending on flag.
+Add e-wallet transaction.
+Prevent overpayment.
+First payment confirms Hold booking.
+Void own transaction before settlement.
+Cannot void others’ transactions.
+Cannot add transaction to completed/cancelled/expired/no-show booking.
+Deliverables
+Payment recording works.
+Remaining amount calculated dynamically.
+Transaction correction by void works.
+Definition of Done
+No raw transaction edit exists.
+Money history is traceable.
+Status changes correctly based on valid transactions.
+Sprint 5 — Booking Lifecycle
+Goal
+
+Complete the operational lifecycle of a booking.
+
+Backend Tasks
+Add cancel booking API.
+Staff cancellation reason required.
+Owner cancellation reason optional.
+Add reschedule booking API.
+Reschedule rules:
+booking must not be completed
+new slot must be free
+old slot becomes available
+transactions remain attached
+Add complete booking API.
+Completion rules:
+if remaining > 0, require confirmation
+system creates automatic cash transaction for remaining amount
+booking becomes Completed
+booking becomes locked
+Add no-show API.
+Add hold expiry job:
+Hold expires after 12 hours
+Expired booking no longer blocks slot
+Add locked rules:
+completed bookings cannot be edited
+completed bookings cannot receive transactions
+completed bookings cannot be cancelled/rescheduled
+Add audit logs for all lifecycle changes.
+Frontend Tasks
+Cancel booking action.
+Cancellation reason form.
+Reschedule booking UI.
+Complete booking button.
+Confirmation modal for remaining cash.
+No-show button.
+Show locked state for completed booking.
+Show expired state.
+Show status colors.
+QA Tasks
+Staff cancellation requires reason.
+Owner cancellation reason optional.
+Reschedule to free slot succeeds.
+Reschedule to occupied slot fails.
+Complete with no remaining succeeds.
+Complete with remaining creates cash transaction after confirmation.
+Completed booking becomes locked.
+Hold expiry releases slot.
+Deliverables
+Full booking lifecycle complete.
+Booking statuses work end-to-end.
+Expired holds handled.
+Definition of Done
+Booking lifecycle is safe and auditable.
+Completed bookings are immutable.
+Expired holds free slots correctly.
+Sprint 6 — Staff Settlement
+Goal
+
+Allow owner/allowed manager to settle staff-collected money.
+
+Backend Tasks
+Create Settlement model or SettlementBatch model.
+Settlement includes:
+staff user
+club
+court
+date range
+total cash
+total Instapay
+total e-wallet
+total amount
+settled_by
+settled_at
+Add API:
+preview unsettled transactions by staff
+settle staff transactions
+list settlement history
+settlement detail
+Settlement rules:
+owner can settle staff transactions
+manager can settle only if flag enabled
+staff cannot settle own transactions
+user cannot settle his own transactions
+settled transactions become locked
+Add audit logs.
+Frontend Tasks
+Owner settlement page.
+Select staff.
+Show unsettled transactions from old until now.
+Show totals by method.
+Show transaction list.
+Confirm settlement.
+Settlement history screen.
+Settlement detail screen.
+QA Tasks
+Owner can preview staff unsettled transactions.
+Owner can settle staff transactions.
+Staff cannot settle.
+Manager cannot settle unless flag enabled.
+Manager cannot settle own transactions.
+Settled transactions become locked.
+Settled transactions cannot be voided.
+Deliverables
+Staff shift settlement works.
+Owner can track staff-collected money.
+Definition of Done
+Money can be reviewed by staff.
+Totals are correct by method.
+Settlement locks transactions.
+Settlement history is available.
+Sprint 7 — Dashboards, Reports, Audit Logs
+Goal
+
+Give owners and platform admins visibility.
+
+Backend Tasks
+Add owner dashboard API:
+today’s bookings
+week’s bookings
+remaining payments
+completed bookings
+cancelled bookings
+no-shows
+basic revenue summary
+unsettled transactions
+Add platform dashboard API:
+all clubs
+all courts
+all bookings
+empty slots
+filters by club/court/date/status
+all transactions
+all settlements
+Add audit log model if not already implemented.
+Add audit log APIs:
+list by club
+list by court
+list by booking
+list by user
+Ensure all important actions are logged.
+Frontend Tasks
+Owner dashboard.
+Staff dashboard.
+Platform admin dashboard.
+Reports screen.
+Audit log screen.
+Filters:
+date
+court
+club
+status
+staff
+QA Tasks
+Owner sees only own club data.
+Manager sees only assigned club data.
+Staff sees only assigned court data.
+Platform admin sees all.
+Audit logs exist for important actions.
+Dashboard numbers match booking/transaction data.
+Deliverables
+Dashboards working.
+Audit visibility working.
+Reports ready for pilot.
+Definition of Done
+Owner can monitor operations remotely.
+Platform admin can monitor all courts.
+Audit logs support anti-manipulation promise.
+Sprint 8 — QA Hardening, Pilot Readiness, Deployment
+Goal
+
+Prepare for real pilot with 3–5 courts.
+
+Backend Tasks
+Add missing tests.
+Add database constraints for booking overlap.
+Add transaction safety.
+Add performance checks for schedule APIs.
+Add pagination/filtering.
+Add seed data.
+Add production settings.
+Add deployment configuration.
+Add logging/error monitoring.
+Add backups plan.
+Frontend Tasks
+Mobile UX polishing.
+Arabic wording review.
+Loading states.
+Empty states.
+Error messages.
+Confirmation modals.
+Form validation.
+Test on Android mobile browser.
+Prepare onboarding screens if needed.
+QA Tasks
+End-to-end test:
+create club
+create court
+create owner
+create staff
+create booking
+add transaction
+complete booking
+settle staff
+Test permission boundaries.
+Test concurrent booking conflict.
+Test hold expiry.
+Test settlement locking.
+Test completed booking lock.
+Test inactive user/court/club.
+Test mobile responsiveness.
+Deliverables
+MVP ready for pilot.
+Deployment ready.
+User flows tested.
+First 3–5 courts can be onboarded.
+Definition of Done
+Product can be used by real staff on mobile.
+Owner can monitor.
+Booking/payment/settlement flows work.
+No critical permission or money bugs.
+Recommended MVP Release Plan
+Release 1 — Internal Alpha
+
+Users:
+
+You
+Internal testers
+
+Includes:
+
+Auth
+Clubs/courts
+Basic bookings
+Basic transactions
+
+Goal:
+
+Validate core flow technically.
+
+Release 2 — Closed Pilot
+
+Users:
+
+1 real court
+
+Includes:
+
+Full booking lifecycle
+Transactions
+Settlement
+Dashboard
+
+Goal:
+
+Use the system for real daily work.
+
+Success metric:
+
+Court uses the system for 7 days without returning fully to paper.
+
+Release 3 — Controlled Pilot
+
+Users:
+
+3–5 courts
+
+Includes:
+
+Full MVP 1
+Audit logs
+Reports
+Owner dashboard
+
+Goal:
+
+Validate adoption and operational fit.
+
+Success metric:
+
+3–5 courts use the system for 2 weeks with real bookings and settlements.
+
+Critical Team Lead Warnings
+1. Do not start with marketplace
+
+Still rejected for MVP 1.
+
+You need reliable court data first.
+
+2. Do not build payment gateway now
+
+Manual transaction recording is enough.
+
+Gateway comes after operations are validated.
+
+3. Do not skip audit logs
+
+Audit logs are core business value, not a luxury.
+
+4. Do not allow raw money edits
+
+Transactions must be voided/corrected, not edited.
+
+5. Do not build a desktop-first UI
+
+The real users are staff on phones.
+
+Mobile-first is mandatory.
+
+6. Do not overbuild pricing
+
+Default court price + owner override is enough.
+
+Advanced pricing engine later.
+
+7. Do not ignore concurrency
+
+Double booking is one of the most dangerous bugs.
+
+Backend must protect this, not frontend only.
+
+Suggested Development Order
+
+The safest order:
+
+Auth and roles
+Clubs/courts
+Staff assignments
+Booking creation
+Overlap protection
+Transactions
+Booking lifecycle
+Settlement
+Dashboards
+Audit logs
+QA/deployment
+
+Do not build settlement before transactions.
+Do not build bookings before courts.
+Do not build dashboards before core data is stable.
+
+Overall MVP Definition of Done
+
+MVP 1 is done when:
+
+Platform admin can create clubs and courts.
+Owner can manage own clubs only.
+Manager can manage assigned club only.
+Staff can manage assigned court only.
+Staff can create Hold booking.
+Staff can add transaction and confirm booking.
+System prevents overlapping bookings.
+Staff can cancel with reason.
+Staff can reschedule before completion.
+Staff can complete booking.
+Remaining cash is auto-recorded after confirmation.
+Completed booking is locked.
+Owner can settle staff transactions.
+Settled transactions are locked.
+Owner can view dashboard.
+Platform admin can monitor all clubs/courts.
+All important actions are audit logged.
+System works well on mobile.
+Pilot court can use it in real operations.

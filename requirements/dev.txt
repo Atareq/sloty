@@ -1,0 +1,25 @@
+-r base.txt
+
+# Testing - Phase 1 & 2
+pytest==7.4.3
+pytest-django==4.7.0
+pytest-cov==4.1.0
+factory-boy==3.3.0
+pytest-mock==3.12.0
+faker==20.0.0
+pytest-freezegun==0.4.2
+
+# Linters and formatters
+isort==5.13.2
+flake8==4.0.1
+black==24.8.0
+
+# Shell
+ipdb==0.13.9
+ipython==8.4.0
+
+# Remove Print Statements
+remove-print-statements==0.4.0
+
+# Pre-commit
+pre-commit==4.5.1

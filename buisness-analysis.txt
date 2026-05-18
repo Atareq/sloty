@@ -1,0 +1,1870 @@
+The goal of Phase 2 was to convert the business idea from Phase 1 into clear operational rules, workflows, roles, permissions, edge cases, and acceptance criteria.
+
+The project is still not in implementation stage.
+
+This document should be used later as a reference for:
+
+Sprint planning
+Backend design
+Frontend UX
+Database modeling
+API planning
+Testing
+Acceptance criteria
+Product decisions
+2. Final Product Context
+
+The product will start as a free court management system for local football courts in Assiut.
+
+The first goal is:
+
+Replace paper booking and manual records inside local courts.
+
+The future goal is:
+
+Build a platform where players can book available slots through the application, while the platform earns commission from bookings it generates.
+
+3. MVP Separation
+
+The product must be separated into two main MVP stages.
+
+MVP 1 — Court Management System
+
+Purpose:
+
+Help clubs/courts manage bookings, payments, staff activity, and reports.
+
+Users:
+
+Platform Super Admin
+Club Owner
+Club Manager
+Court Staff
+
+No player app.
+No online payment gateway.
+No public marketplace.
+No automated commission.
+No platform CS booking yet.
+
+MVP 2 — Platform / CS Booking
+
+Purpose:
+
+Allow platform-generated bookings and commission collection.
+
+Users:
+
+Platform Super Admin
+Customer Service
+Club Owner
+Club Manager
+Court Staff
+Player indirectly
+
+This comes after MVP 1 is validated.
+
+MVP 2 includes:
+
+Platform booking source
+CS-created booking
+Player deposit to platform wallet
+Commission calculation
+Next-morning settlement with court
+Platform-generated booking tracking
+4. Core Product Principle
+
+This rule is now considered a main project law:
+
+Bookings can change until completed. Transactions can accumulate until settled. Completed bookings and settled transactions become locked.
+
+This principle controls the entire system.
+
+Meaning:
+
+A booking can be edited/rescheduled/cancelled before completion.
+Transactions can be added before settlement.
+Transactions are not silently edited.
+Completed bookings cannot be changed.
+Settled transactions cannot be changed.
+Corrections must be logged.
+5. Final Terminology
+Club
+
+You chose the term:
+
+Club
+
+instead of venue.
+
+A club is the business/location that owns one or more courts.
+
+Example:
+
+El-Nasr Club
+
+Court
+
+A court is the playable field inside a club.
+
+Example:
+
+Court 1, Court 2
+
+Booking
+
+A booking is a reserved time slot for a customer on a specific court.
+
+Transaction
+
+A transaction is any payment recorded against a booking.
+
+Examples:
+
+Cash deposit
+Instapay transfer
+E-wallet transfer
+Remaining amount collected at completion
+Settlement
+
+Settlement means reviewing and locking collected money for a staff member or platform operation.
+
+In MVP 1, settlement mainly means:
+
+Owner settles staff shift transactions.
+
+6. Final System Hierarchy
+
+The approved structure is:
+
+Platform
+ └── Club
+      └── Court
+           └── Booking
+                └── Transactions
+
+Ownership/access structure:
+
+Owner can own multiple clubs
+Club can have multiple owners
+Club can have multiple courts
+Manager belongs to one club
+Staff belongs to one court
+Court belongs to one club
+7. User Roles
+7.1 Platform Super Admin
+
+The Platform Super Admin exists from MVP 1.
+
+This role controls and monitors the whole platform.
+
+Can:
+
+Create clubs
+Edit clubs
+Deactivate clubs
+Create courts
+Edit courts
+Deactivate courts
+Assign owners to clubs
+View all clubs
+View all courts
+View all bookings
+View empty slots
+Filter by club
+Filter by court
+Filter by date
+Filter by booking status
+View all transactions
+View all settlements
+View all audit logs
+Correct data only through logged correction actions
+
+Cannot:
+
+Silently edit financial history
+Silently edit completed bookings
+Silently edit settled transactions
+
+Important rule:
+
+Platform Super Admin can correct data only through logged correction actions, not silent edits.
+
+7.2 Club Owner
+
+The Club Owner controls only his own clubs.
+
+Can:
+
+View own clubs
+View courts inside own clubs
+View bookings inside own clubs
+Create bookings
+Edit non-completed bookings
+Cancel bookings
+Complete bookings
+Mark bookings as no-show
+Add managers
+Add staff
+Disable managers/staff
+Set court default price
+Override price for specific booking/slot
+View reports
+View staff activity
+View audit logs
+Settle staff transactions
+View unsettled transactions
+
+Cannot:
+
+Access other clubs
+Access courts outside his ownership
+Edit completed bookings
+Edit settled transactions
+Silently edit staff financial history
+
+Important rule:
+
+Owner cannot access clubs or courts outside his ownership.
+
+7.3 Club Manager
+
+The Club Manager belongs to one club.
+
+Can:
+
+View assigned club
+View all courts inside assigned club
+Create bookings for courts inside assigned club
+Manage daily operations
+Add transactions
+Cancel bookings
+Reschedule bookings
+Complete bookings
+Mark bookings as no-show
+View staff activity inside the club
+Settle staff transactions only if the club allows this flag
+
+Cannot:
+
+Access other clubs
+Change permanent pricing unless owner allows it
+Edit old non-completed bookings
+Edit completed bookings
+Edit settled transactions
+Settle his own transactions
+Edit transactions created by other users
+
+Important rule:
+
+Manager should not change permanent pricing unless owner allows it.
+
+7.4 Court Staff / Receptionist
+
+The Court Staff belongs to one court only.
+
+Can:
+
+View assigned court schedule
+Create bookings
+Create hold bookings
+Add transactions
+Cancel bookings with required reason
+Reschedule non-completed bookings
+Complete bookings
+Mark bookings as no-show
+Correct/void only his own unsettled transactions
+
+Cannot:
+
+Access other courts
+Access other clubs
+Change prices
+Delete bookings
+Edit completed bookings
+Edit settled transactions
+Edit transactions created by others
+Settle his own transactions
+View owner-level reports
+
+Important rule:
+
+Staff belongs to one court only in MVP.
+
+This is accepted because most local clubs are expected to have one court, or if they have more than one, the manager role can be used.
+
+Future improvement:
+
+Staff may later be assigned to multiple courts through a proper relational assignment table, not a dictionary/JSON field.
+
+7.5 Future Role: Customer Service
+
+Not MVP 1.
+
+Will be used in MVP 2 for platform-generated bookings.
+
+Can later:
+
+Create platform holds
+Confirm customer deposit
+Record transaction ID
+Confirm platform booking
+Support customers
+Assist with disputes
+7.6 Future Role: Player
+
+Not MVP 1.
+
+Will be used later in the public app/platform.
+
+Can later:
+
+Search available slots
+Request booking
+Pay deposit
+Receive confirmation
+Rate courts/players in later phases
+8. User Scope Rules
+Owner Scope
+
+An owner may have multiple clubs.
+
+A club may have multiple owners.
+
+Owner can only access assigned clubs.
+
+Manager Scope
+
+A manager belongs to one club.
+
+Manager can operate across all courts inside that club.
+
+Staff Scope
+
+A staff member belongs to one court.
+
+Staff can only access that court.
+
+9. Setup Workflow
+9.1 Club Creation
+
+Created by:
+
+Platform Super Admin
+
+Required club data:
+
+Club name
+City
+Area/address
+Status
+
+Optional:
+
+Phone
+Notes
+Logo
+Coordinates
+Public description
+
+Rules:
+
+Club can be active/inactive.
+Club should not be hard deleted once it has history.
+Inactive club cannot receive new bookings.
+Existing records remain visible.
+
+Acceptance criteria:
+
+Platform admin can create club.
+Club appears in platform list.
+Club can be filtered.
+Creation is audit logged.
+9.2 Owner Assignment
+
+Created/assigned by:
+
+Platform Super Admin
+
+Required owner data:
+
+Full name
+Phone number
+Login credential
+Assigned club(s)
+Status
+
+Rules:
+
+One owner can own multiple clubs.
+One club can have multiple owners.
+Owner sees only assigned clubs.
+Owner account can be deactivated.
+Old actions remain in audit log.
+
+Acceptance criteria:
+
+Owner can log in.
+Owner sees only his clubs.
+Owner cannot access unrelated clubs.
+Owner assignment is audit logged.
+9.3 Court Creation
+
+Created by:
+
+Platform Super Admin
+Club Owner, if allowed
+
+Required court data:
+
+Club
+Court name
+Sport type
+Default price
+Status
+Working hours
+Slot duration
+
+Optional:
+
+Notes
+Surface type
+Images later
+Digital reference policy
+Hold expiry configuration later
+
+Rules:
+
+Court belongs to one club.
+Club can have multiple courts.
+Court has default price.
+Owner can override specific slot/booking price.
+Staff cannot change price.
+Inactive court cannot receive new bookings.
+Existing history remains visible.
+
+Acceptance criteria:
+
+Court appears under correct club.
+Court appears in schedule.
+Court has price and working hours.
+Court creation is audit logged.
+9.4 Manager Creation
+
+Created by:
+
+Club Owner
+
+Required manager data:
+
+Full name
+Phone number
+Login credential
+Assigned club
+Status
+
+Rules:
+
+Manager belongs to one club.
+Manager sees all courts inside that club.
+Manager cannot access other clubs.
+Manager cannot change pricing unless owner allows it.
+Manager can settle transactions only if club flag allows.
+Manager cannot settle his own transactions.
+
+Acceptance criteria:
+
+Manager can log in.
+Manager sees assigned club only.
+Manager can manage operations inside assigned club.
+Manager permissions follow club flags.
+9.5 Staff Creation
+
+Created by:
+
+Club Owner
+Club Manager, if allowed
+
+Required staff data:
+
+Full name
+Phone number
+Login credential
+Assigned court
+Status
+
+Rules:
+
+Staff belongs to one court only.
+Staff sees only assigned court.
+Staff cannot change prices.
+Staff cannot hard delete bookings.
+Staff cannot edit completed bookings.
+Staff cancellation reason is required.
+Staff can void/correct only his own unsettled transactions.
+
+Acceptance criteria:
+
+Staff can log in.
+Staff sees only assigned court.
+Staff can create bookings on assigned court.
+Staff cannot access other courts.
+Staff creation is audit logged.
+10. Activation / Deactivation Rules
+Users
+
+Users should not be hard deleted after they perform actions.
+
+A deactivated user:
+
+Cannot log in
+Cannot create bookings
+Cannot add transactions
+Cannot settle transactions
+Still appears in old bookings
+Still appears in transactions
+Still appears in audit logs
+Clubs
+
+A deactivated club:
+
+Cannot receive new bookings
+Existing bookings remain
+Reports remain visible
+Historical data remains available
+Courts
+
+A deactivated court:
+
+Cannot receive new bookings
+Existing bookings remain
+Schedule history remains visible
+Future bookings are not automatically cancelled in MVP
+11. Permission Flags
+Club-Level Flags
+Flag	Default	Meaning
+manager_can_settle_transactions	false	Allows manager to settle staff transactions
+manager_can_change_pricing	false	Allows manager to change permanent pricing
+Court-Level Flags
+Flag	Default	Meaning
+requires_digital_payment_reference	false	Instapay/e-wallet reference required or optional
+internal_hold_expiry_hours	12	Internal hold expiry duration
+12. Booking Workflow
+12.1 Who Can Create Bookings?
+
+Can create bookings:
+
+Platform Super Admin
+Club Owner
+Club Manager
+Court Staff
+
+Restrictions:
+
+Staff only on assigned court
+Manager only inside assigned club
+Owner only inside owned clubs
+Platform Super Admin anywhere, fully logged
+12.2 Booking Sources
+
+For MVP 1:
+
+Source	Meaning
+Manual	Created by court owner/manager/staff
+Admin Correction	Created/adjusted by platform admin in exceptional cases
+
+For MVP 2 later:
+
+Source	Meaning
+Platform CS	Created by customer service
+App Booking	Created by player through app
+12.3 Required Booking Data
+
+Required:
+
+Club
+Court
+Customer name
+Customer phone
+Start time
+End time
+Total price
+Status
+Created by
+Source
+
+Optional:
+
+Notes
+Cancellation reason when cancelling
+Transactions
+13. Booking Statuses
+
+Final statuses:
+
+Status	Meaning
+Hold	Slot is reserved but no valid transaction exists
+Confirmed	At least one valid transaction exists
+Completed	Customer played and booking is locked
+Cancelled	Booking was cancelled
+No-show	Customer did not come
+Expired	Hold expired without transaction
+14. Booking Confirmation Rule
+
+Final rule:
+
+A booking starts as Hold if there is no transaction. It becomes Confirmed only after at least one valid transaction is attached.
+
+So:
+
+Booking without transaction → Hold
+Booking with valid transaction → Confirmed
+
+If all valid transactions are voided:
+
+Confirmed → Hold
+15. Slot Blocking Rule
+
+Hold bookings block the slot.
+
+Confirmed bookings block the slot.
+
+Non-blocking statuses:
+
+Cancelled
+Expired
+Completed in the past
+No-show after closure
+
+Important final rule:
+
+Hold blocks the slot until it becomes Confirmed, Cancelled, or Expired.
+
+16. Hold Expiry
+
+For MVP 1:
+
+Internal hold expires after 12 hours.
+
+When hold expires:
+
+Booking status becomes Expired.
+Slot becomes available.
+Booking remains in history.
+Booking is not deleted.
+
+Future:
+
+Owner may configure expiry time.
+Platform bookings may have shorter expiry such as 15 minutes.
+17. Overlap Rule
+
+The system must prevent overlapping active bookings on the same court.
+
+Existing booking:
+
+8:00 PM → 9:00 PM
+
+Blocked:
+
+8:30 PM → 9:30 PM
+
+Allowed:
+
+9:00 PM → 10:00 PM
+
+Rule:
+
+A new booking is not allowed if it overlaps with any Hold or Confirmed booking on the same court.
+
+18. Booking Duration Rule
+
+For MVP:
+
+Booking follows court slot duration.
+Multiple consecutive slots may be booked as one longer booking.
+
+Example:
+
+If slot duration is 60 minutes:
+
+8–9 is one slot.
+8–10 is two slots in one booking.
+19. Pricing Rules
+Staff
+
+Staff cannot change price.
+
+Manager
+
+Manager cannot change permanent pricing unless owner allows it.
+
+Owner
+
+Owner can:
+
+Set court default price.
+Override specific booking/slot price.
+Change future pricing.
+
+Rules:
+
+Existing booking keeps original price.
+Owner can override before completion.
+Staff cannot discount or change price.
+All price changes must be logged.
+20. Booking Outside Working Hours
+
+Final correction from user:
+
+Staff can create bookings outside working hours.
+
+Final accepted rule:
+
+Staff can create booking outside court working hours.
+No special “outside working hours” flag is required.
+Booking behaves like any other booking.
+If no transaction exists, it is Hold.
+If transaction exists, it is Confirmed.
+If completed with remaining amount, remaining amount is counted as cash collected by the staff after confirmation.
+It will appear in the staff settlement like any other transaction.
+
+Important:
+
+Since no special flag is required, outside-hours bookings are treated as valid operational bookings.
+
+21. Booking Creation Without Payment
+
+Flow:
+
+Staff opens schedule.
+Staff selects free slot.
+Staff enters customer name.
+Staff enters customer phone.
+System calculates price.
+Staff saves booking without transaction.
+Booking status becomes Hold.
+Slot becomes blocked.
+Hold expiry timer starts.
+Booking creation is audit logged.
+
+Result:
+
+Booking status = Hold
+Payment = No transaction yet
+Slot = Blocked
+22. Booking Creation With Payment
+
+Flow:
+
+Staff opens schedule.
+Staff selects free slot.
+Staff enters customer data.
+System calculates price.
+Staff adds transaction.
+System validates transaction.
+Booking is created.
+Transaction is attached.
+Booking status becomes Confirmed.
+Slot becomes blocked.
+Booking and transaction are audit logged.
+
+Result:
+
+Booking status = Confirmed
+Remaining = total price - valid transactions
+23. Rescheduling / Moving Booking
+
+Rule:
+
+Any non-completed booking can be moved to another free slot.
+
+Allowed by:
+
+Staff for assigned court
+Manager inside club
+Owner inside owned clubs
+
+Rules:
+
+New slot must be free.
+Booking must not be completed.
+Old slot becomes available.
+New slot becomes occupied.
+Transactions remain attached to the same booking.
+Move action is audit logged.
+If new slot has same price
+
+Allowed.
+
+If new slot has higher price
+
+Allowed.
+
+Difference becomes remaining amount.
+
+Difference must be paid before or at completion.
+
+If new slot has lower price
+
+MVP rule:
+
+Keep original booking price unless owner changes it.
+
+Reason:
+
+Avoid refund/discount complexity in MVP.
+
+24. Booking Cancellation
+
+Bookings can be cancelled, not deleted.
+
+Rules:
+
+No hard delete.
+Staff cancellation reason is required.
+Owner cancellation reason is optional.
+Cancelled booking no longer blocks slot.
+Cancellation is audit logged.
+
+Suggested staff cancellation reasons:
+
+Customer cancelled
+No deposit paid
+Wrong booking
+Duplicate booking
+Customer changed time
+Court unavailable
+Other
+
+If Other:
+
+Staff should add note.
+25. No-Show
+
+A booking can be marked as No-show if customer does not come.
+
+Rules:
+
+No-show closes the booking.
+No-show is not deleted.
+No-show does not automatically create new booking.
+No-show should be visible in reports.
+Action must be logged.
+26. Completed Booking
+
+A booking becomes Completed when customer has played.
+
+Final rule:
+
+Nobody can edit completed bookings, even the owner.
+
+After completion:
+
+Booking is locked.
+Transactions cannot be added.
+Transactions cannot be voided.
+Booking cannot be rescheduled.
+Booking cannot be cancelled.
+Corrections require admin correction process later.
+27. Completion With Remaining Amount
+
+If remaining amount is greater than zero and staff clicks Complete:
+
+System should show:
+
+Remaining amount is X EGP. Confirm this amount was collected as cash?
+
+If staff confirms:
+
+System creates automatic cash transaction.
+Amount = remaining amount.
+Method = Cash.
+Collected by = staff.
+Transaction is unsettled.
+Booking becomes Completed.
+Booking locks.
+Transaction appears in staff settlement.
+
+If staff does not confirm:
+
+Booking cannot be completed.
+
+This supports your rule:
+
+If completed, the rest is counted on the staff shift as cash automatically.
+
+But it should happen after explicit confirmation, not silently.
+
+28. Transaction Workflow
+28.1 What Is a Transaction?
+
+A transaction is a payment record connected to a booking.
+
+Examples:
+
+Cash deposit
+Instapay transfer
+E-wallet transfer
+Remaining amount paid after playing
+Auto-cash transaction created on completion
+28.2 Payment Methods
+
+MVP payment methods:
+
+Cash
+Instapay
+E-wallet
+28.3 Transaction Required Data
+
+Required:
+
+Booking
+Amount
+Payment method
+Collected by
+Created at
+
+Conditional:
+
+Reference for Instapay/e-wallet depending on court policy
+
+Optional:
+
+Notes
+29. Transaction Reference Rule
+
+Each court has this flag:
+
+requires_digital_payment_reference = true/false
+
+If true:
+
+Instapay reference is required.
+E-wallet reference is required.
+
+If false:
+
+Reference is optional but recommended.
+
+Cash:
+
+Reference is not required.
+30. Transaction Amount Rules
+
+Rules:
+
+Amount must be greater than zero.
+Amount cannot exceed remaining amount in MVP.
+Multiple transactions are allowed.
+Remaining amount is calculated dynamically.
+
+Formula:
+
+Remaining amount = booking total price - sum(valid transactions)
+
+You decided:
+
+No cached remaining amount in Phase 1 or Phase 2.
+
+Accepted.
+
+31. Multiple Transactions Per Booking
+
+Allowed.
+
+Example:
+
+Booking price = 300 EGP
+
+Transactions:
+
+50 EGP cash
+100 EGP Instapay
+150 EGP cash
+
+Result:
+
+Total paid = 300
+Remaining = 0
+32. Transaction Creation Rules
+
+A transaction can be added only if:
+
+Booking is not completed.
+Booking is not cancelled.
+Booking is not expired.
+Booking is not no-show.
+User has permission.
+Amount is valid.
+Reference rules are satisfied.
+
+Transactions can be added to:
+
+Booking Status	Can Add Transaction?
+Hold	Yes
+Confirmed	Yes
+Completed	No
+Cancelled	No
+No-show	No
+Expired	No
+33. Add Transaction to Hold
+
+When a valid transaction is added to a Hold booking:
+
+Hold → Confirmed
+34. Add Transaction to Confirmed Booking
+
+When a transaction is added to a Confirmed booking:
+
+Confirmed remains Confirmed
+Remaining amount recalculates
+35. No Raw Transaction Edit
+
+Locked rule:
+
+Transactions must not be directly edited.
+
+Rejected behavior:
+
+Change transaction from 50 EGP to 30 EGP silently
+
+Correct behavior:
+
+Void old transaction
+Create corrected transaction
+Log the reason
+
+Reason:
+
+Transactions are financial history.
+
+36. Transaction Void / Correction
+
+A user can void/correct only transactions that:
+
+Were created by himself.
+Are not settled.
+Belong to a booking that is not completed.
+Are within his permission scope.
+
+So:
+
+Staff can correct only his own unsettled transactions.
+Manager can correct only his own unsettled transactions.
+Owner can correct only his own unsettled transactions.
+Platform Super Admin can correct through logged correction action.
+37. Transaction Void Flow
+
+Flow:
+
+User opens transaction he created.
+User clicks Void.
+System checks:
+User created it.
+Transaction is not settled.
+Booking is not completed.
+User enters reason.
+Transaction becomes voided.
+It no longer counts toward paid amount.
+Remaining amount recalculates.
+Booking status is re-evaluated.
+Void action is audit logged.
+
+If no valid transactions remain:
+
+Booking returns to Hold
+
+If other valid transactions remain:
+
+Booking stays Confirmed
+38. Settled Transaction Lock
+
+Once transaction is settled:
+
+It is locked.
+
+Normal users cannot:
+
+Edit it
+Void it
+Delete it
+Change method
+Change amount
+Change reference
+
+If serious mistake happens:
+
+Platform Super Admin correction action only, fully logged.
+
+39. Completed Booking Lock and Transactions
+
+Once booking is completed:
+
+No more transactions can be added.
+No transaction can be voided.
+No booking data can be edited.
+Booking becomes financial history.
+40. Staff Shift Settlement
+
+This is a key MVP 1 workflow.
+
+Purpose:
+
+Owner reviews and settles money collected by a staff member.
+
+40.1 Who Can Settle?
+
+Can settle:
+
+Club Owner
+Club Manager only if manager_can_settle_transactions = true
+
+Cannot settle:
+
+Court Staff
+Same user who collected the money
+Manager if club flag is false
+
+Important rule:
+
+Staff cannot settle his own transactions.
+
+40.2 Settlement Scope
+
+Owner can settle transactions for:
+
+One staff from old unsettled transactions until now.
+
+This represents a staff shift or period.
+
+40.3 Settlement Data
+
+Settlement should show:
+
+Staff name
+Court
+Date range
+Cash total
+Instapay total
+E-wallet total
+Total unsettled amount
+Number of bookings
+Transaction list
+Settled by
+Settled at
+40.4 Settlement Result
+
+When owner confirms settlement:
+
+Included transactions become settled.
+Settled transactions are locked.
+Settlement record/batch is created.
+Audit log records settlement.
+41. Manager Settlement Rule
+
+Manager can settle staff transactions only if club flag allows it.
+
+Flag:
+
+manager_can_settle_transactions = true/false
+
+Default:
+
+false
+
+Manager cannot settle his own transactions.
+
+42. Platform Settlement — Future MVP 2
+
+From Phase 1, platform-generated bookings later follow this model:
+
+Player pays deposit to platform wallet.
+Platform takes 10% of full booking price.
+Court receives remaining deposit share.
+Settlement to court happens next morning.
+
+Example:
+
+Booking price = 300 EGP
+Deposit = 50 EGP
+Platform commission = 30 EGP
+Court receives from deposit = 20 EGP
+Customer pays remaining 250 EGP at court
+
+This is not MVP 1, but the system should not block this future model.
+
+43. Dashboard / Reporting Requirements
+Owner Dashboard — MVP
+
+Owner should see:
+
+Today’s bookings
+Week’s bookings
+Remaining payments
+Completed bookings
+Cancelled bookings
+No-show bookings
+Basic revenue summary
+Staff activity
+Unsettled transactions
+Staff settlement status
+Platform Admin Dashboard — MVP
+
+Platform Super Admin should see:
+
+All clubs
+All courts
+All bookings
+Empty slots
+Filters by club/court/date/status
+All transactions
+All settlements
+Audit logs
+Active/inactive clubs
+Active/inactive courts
+Staff Dashboard — MVP
+
+Staff should see:
+
+Assigned court schedule
+Today’s bookings
+Holds
+Confirmed bookings
+Remaining amounts
+Actions needed
+Add transaction
+Complete booking
+Cancel booking
+No-show booking
+44. UX Requirements
+
+Since staff will use their own mobile phones, the system must be:
+
+Mobile-first
+Arabic-first
+Fast
+Simple
+Usable on average Android phones
+Easy during rush hours
+Minimal typing
+Clear buttons
+Clear schedule view
+Clear booking status colors
+Easy add payment flow
+Easy complete booking flow
+
+Important UX principle:
+
+If the system is slower than paper, staff will return to paper.
+
+45. Recommended Booking Status Colors
+
+Not mandatory, but useful later:
+
+Status	UX Meaning
+Hold	Warning / temporary
+Confirmed	Active / booked
+Completed	Done
+Cancelled	Cancelled
+No-show	Negative
+Expired	Inactive
+46. Audit Log Requirements
+
+Audit logs are mandatory because one of the core product values is anti-manipulation.
+
+Actions to log:
+
+Setup Actions
+Club created
+Club edited
+Club deactivated
+Court created
+Court edited
+Court deactivated
+Owner assigned
+Owner removed
+Manager created
+Manager deactivated
+Staff created
+Staff reassigned
+Staff deactivated
+Price changed
+Permission flag changed
+Booking Actions
+Booking created
+Booking edited
+Booking cancelled
+Booking rescheduled
+Booking completed
+Booking marked no-show
+Booking expired
+Booking status changed
+Transaction Actions
+Transaction created
+Transaction voided
+Correction created
+Transaction settled
+Auto-cash transaction created on completion
+Audit Log Data
+
+Should include:
+
+Actor
+Actor role
+Action
+Entity type
+Entity ID
+Old value
+New value
+Timestamp
+Reason, when needed
+47. Business Rules Summary
+Setup Rules
+Rule	Decision
+Term venue/branch	Use Club
+Owner can own multiple clubs	Yes
+Club can have multiple owners	Yes
+Club can have multiple courts	Yes
+Staff belongs to one court	Yes
+Manager belongs to one club	Yes
+Platform Super Admin from MVP 1	Yes
+No hard delete after history	Yes
+Deactivation instead of deletion	Yes
+Booking Rules
+Rule	Decision
+Booking without transaction	Hold
+Booking with valid transaction	Confirmed
+Hold blocks slot	Yes
+Hold expiry	12 hours
+Cancelled booking blocks slot	No
+Expired booking blocks slot	No
+Completed booking editable	No
+Hard delete booking	No
+Staff cancellation reason	Required
+Owner cancellation reason	Optional
+Staff can book outside working hours	Yes
+Outside-hours special flag	No
+Staff can change price	No
+Owner can override price	Yes
+Booking can be moved before completion	Yes
+New slot must be free	Yes
+Transaction Rules
+Rule	Decision
+Multiple transactions per booking	Yes
+Payment methods	Cash / Instapay / E-wallet
+Remaining amount	Dynamic
+Store cached remaining	No
+Raw transaction edit	No
+Correction method	Void + new transaction
+User can void others’ transactions	No
+User can void own unsettled transaction	Yes
+Settled transaction editable	No
+Completed booking transaction editable	No
+Amount can exceed remaining	No in MVP
+Digital reference	Based on court flag
+Auto cash on completion	Yes, after staff confirmation
+Settlement Rules
+Rule	Decision
+Owner settles staff transactions	Yes
+Settlement by one staff shift	Yes
+Manager can settle	Only if club flag allows
+Staff can settle own transactions	No
+Settled transactions locked	Yes
+Settlement shows method breakdown	Yes
+Platform settlement	Future MVP 2
+Platform settlement timing	Next morning
+48. Edge Cases
+Booking Edge Cases
+1. Two users try to book same slot
+
+Rule:
+
+First successful save wins. Second request fails.
+
+System must recheck availability at save time.
+
+2. Staff opens free slot, but someone books before save
+
+Rule:
+
+Backend rechecks availability before saving.
+
+3. Booking without payment
+
+Result:
+
+Status = Hold
+Slot blocked
+Expires after 12 hours
+4. Hold expires
+
+Result:
+
+Status = Expired
+Slot becomes available
+Booking remains in history
+5. Customer pays after hold expired
+
+Rule:
+
+Expired booking does not automatically become confirmed.
+
+User must create a new booking if slot is still available.
+
+6. Staff enters wrong customer phone
+
+Before completion:
+
+Can edit if allowed.
+Edit is logged.
+
+After completion:
+
+No direct edit.
+Correction process only.
+7. Staff books outside working hours
+
+Rule:
+
+Allowed.
+
+No special outside-hours flag needed.
+
+Booking behaves normally.
+
+8. Court inactive
+
+Rule:
+
+No new bookings.
+
+Existing bookings remain.
+
+9. Club inactive
+
+Rule:
+
+No new bookings in any court inside the club.
+
+Existing records remain.
+
+10. Booking moved to higher price slot
+
+Rule:
+
+Price difference becomes remaining amount.
+Difference must be collected before or at completion.
+11. Booking moved to lower price slot
+
+MVP rule:
+
+Keep original booking price unless owner changes it.
+
+12. Completed booking
+
+Rule:
+
+Locked forever for normal users.
+
+Transaction Edge Cases
+1. Add transaction to completed booking
+
+Rule:
+
+Block.
+
+2. Add transaction to cancelled booking
+
+Rule:
+
+Block.
+
+3. Staff tries to void owner transaction
+
+Rule:
+
+Block.
+
+4. Owner tries to silently edit staff transaction
+
+Rule:
+
+Block.
+
+No silent financial edits.
+
+5. Transaction already settled
+
+Rule:
+
+Locked.
+
+6. Voiding transaction removes all payments
+
+Result:
+
+Booking returns to Hold.
+
+7. Transaction amount exceeds remaining
+
+Rule:
+
+Block in MVP.
+
+8. Digital reference required but missing
+
+Rule:
+
+Block if court requires reference.
+
+9. Duplicate reference number
+
+MVP recommendation:
+
+Warn but do not block.
+
+Future improvement:
+
+Detect duplicate references per club/payment method.
+
+10. Completion with remaining amount
+
+Rule:
+
+Staff confirms remaining amount was collected as cash, then system creates cash transaction and completes booking.
+
+49. Acceptance Criteria
+Setup Acceptance Criteria
+Platform Super Admin can create clubs.
+Platform Super Admin can create courts.
+Platform Super Admin can assign owners.
+Owner can see only assigned clubs.
+Owner can create/manage courts inside own clubs.
+Owner can create manager.
+Manager sees only assigned club.
+Owner/manager can create staff.
+Staff sees only assigned court.
+Deactivated users cannot log in.
+Deactivated clubs/courts cannot receive new bookings.
+Setup actions are audit logged.
+Booking Acceptance Criteria
+Authorized user can create booking in allowed scope.
+Staff cannot create booking for another court.
+Manager cannot create booking outside assigned club.
+Owner cannot create booking outside owned clubs.
+Booking without transaction becomes Hold.
+Booking with transaction becomes Confirmed.
+Hold blocks slot.
+Confirmed blocks slot.
+Expired/Cancelled bookings do not block slot.
+System prevents overlapping active bookings.
+Staff cannot change price.
+Price is calculated from court/slot price.
+Owner can override price before completion.
+Booking can move to another free slot before completion.
+Completed booking cannot be edited.
+Booking cannot be hard deleted.
+Staff cancellation requires reason.
+Booking outside working hours is allowed.
+All booking actions are audit logged.
+Transaction Acceptance Criteria
+Authorized users can add transactions.
+Staff can add transaction only for assigned court booking.
+Manager can add transaction only inside assigned club.
+Owner can add transaction only inside owned clubs.
+Cash transaction requires amount.
+Instapay/e-wallet reference follows court policy.
+Amount must be greater than zero.
+Amount cannot exceed remaining amount.
+First transaction converts Hold to Confirmed.
+Multiple transactions are allowed.
+Remaining amount is calculated dynamically.
+Raw transaction edit is not allowed.
+User can void only his own unsettled transaction.
+Settled transaction is locked.
+Completed booking is locked.
+Completion with remaining amount creates cash transaction after confirmation.
+All transaction actions are audit logged.
+Settlement Acceptance Criteria
+Owner can view unsettled transactions per staff.
+Owner can see totals by payment method.
+Owner can settle one staff’s transactions.
+Settled transactions become locked.
+Staff cannot settle his own transactions.
+Manager can settle only if club flag allows.
+Settlement action is audit logged.
+Settlement history remains visible.
+50. Required Data Entities
+
+At business-analysis level, the system needs these core entities:
+
+Club
+Name
+City
+Address
+Status
+Owners
+Flags
+Created by
+Created at
+Court
+Club
+Name
+Sport type
+Default price
+Working hours
+Slot duration
+Status
+Digital reference policy
+User
+Full name
+Phone number
+Role
+Status
+Login credentials
+Assignments
+Booking
+Club
+Court
+Customer name
+Customer phone
+Start time
+End time
+Total price
+Status
+Source
+Created by
+Notes
+Transaction
+Booking
+Amount
+Method
+Reference
+Collected by
+Is voided
+Is settled
+Created at
+Notes
+Settlement
+Staff/user
+Club
+Court
+Date range
+Total cash
+Total Instapay
+Total e-wallet
+Total amount
+Settled by
+Settled at
+Audit Log
+Actor
+Role
+Action
+Entity type
+Entity ID
+Old value
+New value
+Reason
+Timestamp
+51. Personas
+Persona 1 — Court Owner
+
+Needs:
+
+Know what is happening without being physically present.
+See weekly bookings.
+See remaining payments.
+Know what staff collected.
+Reduce manipulation.
+Review staff settlement.
+
+Pain points:
+
+Paper records are messy.
+Cannot monitor remotely.
+Staff may make mistakes or manipulate records.
+No clear report.
+Persona 2 — Court Staff
+
+Needs:
+
+Add booking quickly.
+See free slots.
+Record customer name/phone.
+Add payments.
+Complete bookings.
+Avoid conflict with owner.
+
+Pain points:
+
+Busy environment.
+Customers call quickly.
+Paper can be faster if system is slow.
+Too many required fields will hurt adoption.
+Persona 3 — Club Manager
+
+Needs:
+
+Manage daily operations.
+Monitor multiple courts inside club.
+Review staff activity.
+Maybe settle staff transactions if owner allows.
+
+Pain points:
+
+Needs operational control but should not have owner-level financial authority by default.
+Persona 4 — Platform Super Admin
+
+Needs:
+
+Onboard clubs.
+Configure courts.
+Monitor all usage.
+See booking activity.
+See empty slots.
+Help resolve problems.
+Correct exceptional data issues through logged actions.
+
+Pain points:
+
+Needs visibility across all clubs.
+Must avoid silent data manipulation.
+Persona 5 — Future Player
+
+Needs:
+
+Find available courts.
+Book slot.
+Pay deposit.
+Avoid calling many courts.
+
+Not MVP 1.
+
+52. Rejected / Postponed Ideas
+Rejected for MVP 1
+Hard delete bookings.
+Silent transaction edits.
+Staff changing prices.
+Completed booking editing.
+Settled transaction editing.
+Staff settling his own money.
+Dictionary/JSON field for permission assignments.
+Full marketplace from day one.
+Online payment gateway from day one.
+Showing court phone number publicly in future platform.
+Postponed
+Player mobile app.
+Customer service platform booking.
+Online payment gateway.
+Platform commission automation.
+Court public profiles.
+Court ratings.
+Player ratings.
+Open matches.
+Team/player matching.
+Advanced pricing engine.
+Multi-court staff assignment.
+Advanced analytics.
+Refund workflow.
+Payment gateway reconciliation.
+Full offline mode.
+Self-service club registration.
+53. Open Questions for Phase 3 / Later Analysis
+
+These are not blocking Phase 2, but should be handled later.
+
+Exact court working hours model.
+Exact slot duration options.
+Whether owner can create booking outside working hours without warning.
+Whether platform admin can impersonate user or only assist directly.
+Whether manager can create staff or owner only.
+Whether disabled courts should hide from schedule or appear as inactive.
+Whether booking notes are visible to all roles.
+Exact customer phone validation.
+Whether customer database should be created automatically from booking phones.
+Whether duplicate customer phone should show previous bookings.
+Whether cancellation reasons should be predefined only or allow custom notes.
+Whether no-show requires reason.
+Whether owner can reopen no-show/cancelled booking.
+Whether settlement should require owner password confirmation.
+Whether settlement can be partially done or only all unsettled transactions for a staff.
+Whether Platform Super Admin can make emergency corrections after settlement.
+Whether owner can export reports.
+Whether WhatsApp confirmations will be needed in MVP.
+Whether staff can see revenue totals or only booking-level remaining amounts.
+Whether owner can restrict staff from seeing payment summaries.
+54. Final BA/UX Recommendations
+Recommendation 1
+
+Keep MVP 1 focused on internal court management.
+
+Do not add marketplace, payment gateway, or player app yet.
+
+Recommendation 2
+
+Make booking creation extremely fast.
+
+The first version must be faster than paper.
+
+Recommendation 3
+
+Use transactions instead of a simple deposit field.
+
+This is the correct decision because deposits can be paid multiple times and settlement depends on who collected the money.
+
+Recommendation 4
+
+Keep remaining amount dynamic.
+
+Do not store remaining amount as a manually editable field.
+
+Recommendation 5
+
+Protect money records.
+
+No raw transaction edits.
+Use void/correction flow.
+
+Recommendation 6
+
+Protect completed bookings.
+
+Completed bookings should be locked.
+
+Recommendation 7
+
+Protect settled transactions.
+
+Settled transactions should be locked.
+
+Recommendation 8
+
+Build audit logs from day one.
+
+This is not optional because the product promises security from manipulation.
+
+Recommendation 9
+
+Use staff shift settlement as a core MVP feature.
+
+This is one of the strongest business values for owners.
+
+Recommendation 10
+
+Avoid overengineering permissions in MVP.
+
+Staff belongs to one court.
+Manager belongs to one club.
+Owner owns clubs.
+That is enough now.
+
+55. Final Phase 2 Conclusion
+
+Phase 2 is now complete.
+
+The product is now clearly defined at the business-analysis level.
+
+The approved MVP 1 direction is:
+
+A mobile-first Arabic court management system where Platform Admin creates clubs/courts, owners manage their clubs, managers manage club operations, staff manage one court, bookings start as Hold until payment is recorded, transactions accumulate dynamically, owner settles staff money, completed bookings are locked, settled transactions are locked, and all important actions are audit logged.
