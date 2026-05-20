@@ -31,11 +31,16 @@ Current repo reality:
 - Current implemented app: `apps/accounts/`
 - Current implemented domain apps: `apps/clubs/`, `apps/courts/`, and
   `apps/bookings/`
+- Current API foundation endpoints include `/api/schema/`, `/api/docs/`,
+  `/api/auth/token/`, and `/api/auth/token/refresh/`
+- Current account endpoints include `/api/me/` and platform-admin-only
+  `/api/users/`
 - Project docs live under `docs/`
 - Requirements are split into `requirements/base.txt` and `requirements/dev.txt`
 - Style tooling exists through `.pre-commit-config.yaml`, `pyproject.toml`, and
   `setup.cfg`
-- Sprint 1 implements backend foundation and the custom accounts user model
+- Sprint 1 implements backend foundation, JWT login/refresh URLs, the custom
+  accounts user model, `/api/me/`, and platform-admin user management APIs
 - Sprint 2 implements club/court setup, club membership assignment, and setup
   API scoping
 - Sprint 3 implements booking creation, booking list/detail and schedule
@@ -69,24 +74,45 @@ Use a modular-monolith architecture:
 
 Current implemented app:
 
-- `apps/accounts/` contains the custom user model, identity fields, platform
-  authority flag, account admin registration, and account permission helpers.
+- `apps/accounts/` contains the custom user model, identity fields, phone
+  number, creator tracking, platform authority flag, account admin
+  registration, account serializers/views, and account permission helpers.
 - `User` is identity plus platform authority only. It has
   `is_platform_admin`; it does not store club-scoped OWNER, MANAGER, or STAFF
   roles.
+- Platform user management APIs are restricted to Platform Super Admin users.
+  They may manage identity fields, `is_active`, and `is_platform_admin`; they
+  must not expose or accept Django `is_staff`, `is_superuser`, or passwords in
+  read responses.
 - It must not contain club, court, booking, transaction, settlement, pricing,
   staff shift, marketplace, or assignment business logic.
 - `apps/clubs/` contains club setup, club membership assignment logic, and the
   central `ClubAccessContext` club-scoped access layer.
 - `Club` has a unique `slug` used by club-scoped business API URLs.
+- `Club` stores `manager_can_settle_transactions` and
+  `manager_can_change_pricing` flags. `manager_can_change_pricing` currently
+  gates manager updates to a court's `default_price`. Settlement behavior is
+  still future work even though the flag exists.
 - `ClubMembership` is the single source of OWNER, MANAGER, and STAFF authority
   inside a club. STAFF memberships are tied to a court through
   `ClubMembership.court`.
 - `apps/courts/` contains court setup and court working hours logic.
+- `Court` stores `default_price`, `slot_duration_minutes`,
+  `requires_digital_payment_reference`, and `internal_hold_expiry_hours`.
+  Payment reference and hold-expiry behavior are stored for later transaction
+  and lifecycle work; do not implement those workflows during Sprint 3 unless
+  explicitly requested.
 - Club/court scope must come from active `ClubMembership` rows, not from direct
   club or court fields on `User`.
 - `apps/bookings/` contains booking creation, list/detail APIs, schedule-style
   filters, price snapshot calculation, and active booking overlap protection.
+- Current booking source values are `MANUAL` and `ADMIN_CORRECTION`; only a
+  Platform Super Admin may create an `ADMIN_CORRECTION` booking.
+- Sprint 3 booking PATCH only changes `customer_name`, `customer_phone`, and
+  `notes` on non-locked bookings. It must not change court, start/end time,
+  status, source, or price.
+- Booking list filters currently supported by the API are `court`, `status`,
+  `source`, `date`, `date_from`, and `date_to`.
 - Booking outside working hours is allowed in Sprint 3, and no
   `outside_working_hours` flag is stored.
 - Transactions, booking lifecycle actions, settlements, dashboards, and audit
@@ -170,8 +196,9 @@ Rules for the flow:
 `apps/accounts/`
 
 - Current account app.
-- Contains the custom `User` model, `is_platform_admin`, account admin
-  registration, and account permission helpers.
+- Contains the custom `User` model, `phone_number`, nullable `created_by`,
+  `is_platform_admin`, account admin registration, account serializers/views,
+  `/api/me/`, platform-admin-only `/api/users/`, and account permission helpers.
 - `User.is_platform_super_admin()` is a temporary compatibility helper that
   returns `is_platform_admin`.
 - Do not add or reintroduce club-scoped business roles on `User`.
@@ -187,6 +214,9 @@ Rules for the flow:
 - OWNER and MANAGER memberships are club-level and must not have a court.
 - STAFF memberships are court-scoped and must point to a court in the same
   club.
+- Active MANAGER memberships are currently limited to one club per user.
+  Active STAFF memberships are currently limited to one court assignment per
+  user.
 - `apps/clubs/access.py` contains `ClubAccessContext`, the central source of
   truth for club-scoped access checks and scoped querysets.
 - `apps/clubs/mixins.py` contains `ClubScopedAccessMixin` for club-scoped
@@ -198,6 +228,12 @@ Rules for the flow:
 
 - Court setup app.
 - Contains `Court` and `CourtWorkingHour`.
+- Platform admins and club owners can create and update courts. Managers can
+  update only `default_price`, and only when the selected club has
+  `manager_can_change_pricing=True`. Staff can list/retrieve only their
+  assigned court and cannot update courts.
+- Platform admins, owners, and managers can manage working hours for accessible
+  courts. Staff can list working hours for their assigned court only.
 - `CourtStaffAssignment` has been removed. Staff access is represented by
   `ClubMembership(role=STAFF, court=<court>)`.
 - Do not place booking, transaction, settlement, pricing, or audit behavior
@@ -216,6 +252,9 @@ Rules for the flow:
   bookings block overlapping bookings on the same court.
 - Booking access is club-scoped through `ClubAccessContext`. Staff users can
   list and create bookings only for their assigned court.
+- Creating bookings on inactive clubs or inactive courts is rejected.
+- `COMPLETED`, `CANCELLED`, `NO_SHOW`, and `EXPIRED` bookings are treated as
+  locked for Sprint 3 update behavior and do not block new overlapping slots.
 - Do not place transaction, settlement, lifecycle action, dashboard, marketplace,
   notification, or audit-log behavior here in Sprint 3.
 
@@ -332,6 +371,9 @@ Rules for the flow:
 - Tests currently live in a top-level pytest layout under `tests/`.
 - `tests/accounts/test_user_model.py` contains Sprint 1 model and permission
   tests.
+- Current API tests include `tests/test_api_foundation_urls.py`,
+  `tests/accounts/test_account_api.py`, `tests/clubs/test_club_api.py`,
+  `tests/courts/test_court_api.py`, and `tests/bookings/test_booking_api.py`.
 - Add future tests under `tests/<domain>/` unless the project intentionally
   adopts app-local tests for a specific reason.
 - Test services for business workflows and state transitions.
@@ -450,10 +492,14 @@ Notes:
 - If settings are changed, verify the configured local apps match real package
   paths under `apps/`.
 - Club-scoped API routes currently include:
+  `/api/clubs/`,
   `/api/clubs/{club_slug}/memberships/`,
   `/api/clubs/{club_slug}/courts/`,
   `/api/clubs/{club_slug}/court-working-hours/`, and
   `/api/clubs/{club_slug}/bookings/`.
+- Global API routes currently include `/api/me/`, `/api/users/`,
+  `/api/auth/token/`, `/api/auth/token/refresh/`, `/api/schema/`, and
+  `/api/docs/`.
 
 ## 14. Do and Don't Rules for Codex Agents
 
